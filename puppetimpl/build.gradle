@@ -1,0 +1,47 @@
+apply plugin: 'java'
+apply plugin: 'groovy'
+
+def ANDROID_SDK_HOME = System.properties['user.home'] + '/Library/Android/sdk/build-tools/24.0.0'
+
+task jarEach << {
+    delete fileTree(dir: 'build/libs/' , include: '*.jar')
+    def paths = []
+    fileTree("src").visit { FileVisitDetails details ->
+        if (details.file.path.contains("/puppetimpl/src/main/groovy/") && details.file.path.endsWith(".groovy")) {
+            paths << details.file.path.split("/puppetimpl/src/main/groovy/")[1].replace(".groovy", "*.class")
+        }
+    }
+    paths.each { path ->
+        def className = path.substring(path.lastIndexOf("/") + 1, path.lastIndexOf("*.class"))
+        def fullyQualifiedClassName = path.replace("/", ".").replace("*.class", "")
+        def jarIt = tasks.create(name: "jar${className}", type: Jar) {
+            baseName = fullyQualifiedClassName
+            manifest {
+                attributes("Module-Class": fullyQualifiedClassName)
+            }
+            from(sourceSets.main.output) {
+                include path
+            }
+        }
+        def dexIt = tasks.create(name: "dex${className}", type: Exec) {
+            commandLine "${ANDROID_SDK_HOME}/dx", "--dex", "--output=classes.dex", "build/libs/${fullyQualifiedClassName}.jar"
+        }
+        def aaptIt = tasks.create(name: "aapt${className}", type: Exec) {
+            commandLine "${ANDROID_SDK_HOME}/aapt", "add", "build/libs/${fullyQualifiedClassName}.jar", "classes.dex"
+        }
+        def cleanIt = tasks.create(name: "clean${className}", type: Exec) {
+            commandLine "rm", "classes.dex"
+        }
+        [jarIt, dexIt, aaptIt, cleanIt].each {
+            it.execute()
+        }
+    }
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile 'org.jsoup:jsoup:1.9.2'
+    compile 'org.json:json:20151123'
+    compile 'org.codehaus.groovy:groovy:2.4.7'
+    compile project(':puppet')
+}
