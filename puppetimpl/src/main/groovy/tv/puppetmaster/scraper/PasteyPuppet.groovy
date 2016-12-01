@@ -21,6 +21,9 @@ public class PasteyPuppet implements InstallablePuppet {
                     android:title="M3U List"
                     android:summary="Enter pastebin.com #pastey IDs here. After saving the IDs, reenter #Pastey to refresh content." />
                 <CheckBoxPreference
+                    android:title="Expose to Live Channels"
+                    android:key="expose_streams" />
+                <CheckBoxPreference
                     android:title="Enable rtmp://"
                     android:key="enable_rtmp" />
                 <CheckBoxPreference
@@ -172,7 +175,26 @@ public class PasteyPuppet implements InstallablePuppet {
 
     @Override
     List<Map<String, String>> getLiveChannelsMetaData() {
-        return null
+        def list = []
+        if (sSettingsProvider != null && sSettingsProvider.getBoolean("expose_streams", false)) {
+            for (Puppet p : getChildren()) {
+                if (p instanceof PasteyM3U8Puppet) {
+                    for (Puppet c : p.getChildren()) {
+                        def SourcesPuppet.SourceIterator sources = (SourcesPuppet.SourceIterator) ((PasteySourcesPuppet) c).getSources()
+                        if (sources.hasNext()) {
+                            list << [
+                                    name       : c.getName(),
+                                    description: c.getShortDescription(),
+                                    genres     : c.getCategory(),
+                                    logo       : c.getImageUrl(),
+                                    url        : sources.next().url
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+        return list
     }
 
     @Override
