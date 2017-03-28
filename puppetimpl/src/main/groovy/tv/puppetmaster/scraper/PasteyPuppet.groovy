@@ -56,7 +56,7 @@ public class PasteyPuppet implements InstallablePuppet {
                 name = "Untitled"
             }
         } else {
-            pid = "http://pastebin.com/raw/${pid}"
+            pid = "https://pastebin.com/raw/${pid}"
         }
         return new PasteyM3U8Puppet(parent, true, name, pid)
     }
